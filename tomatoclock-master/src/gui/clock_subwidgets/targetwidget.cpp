@@ -1,0 +1,147 @@
+﻿#include <QPainter>
+#include <QRect>
+#include <QSpacerItem>
+#include <QDebug>
+#include "targetwidget.h"
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+#pragma execution_character_set("utf-8")
+#endif
+
+static const int label_height = 25;
+
+void lon::TargetWidget::initWidgets() {
+    label_p_ = new QLabel(this);
+    target_label_p_ = new QLabel(this);
+    start_target_button_p_ = new Button(this);
+    complete_target_button_p_ = new Button(this);
+    week_label_p_ = nullptr;
+    month_label_p_ = nullptr;
+    week_situation_widget_p_ = nullptr;
+    month_situation_widget_p_ = nullptr;
+    main_layout_p_ = new QGridLayout(this);
+}
+
+void lon::TargetWidget::setWidgetsStyle() {
+    label_p_->setText(label_name_);
+    target_label_p_->setText(target_name_);
+
+    label_p_->setFixedHeight(label_height);
+    target_label_p_->setFixedHeight(label_height);
+    
+    // 设置文本换行，适应更大的宽度
+    label_p_->setWordWrap(true);
+    target_label_p_->setWordWrap(true);
+
+    QFont font;
+    font.setFamily(QString::fromUtf8("Microsoft YaHei UI"));
+    font.setPointSize(10);
+    font.setBold(true);
+    font.setWeight(QFont::Weight::Bold);
+    label_p_->setFont(font);
+    QFont font2;
+    font2.setFamily(QString::fromUtf8("Microsoft YaHei UI"));
+    font2.setPointSize(8);
+    target_label_p_->setFont(font2);
+
+    start_target_button_p_->setFixedSize(45, 45);
+    start_target_button_p_->setNormal(new QIcon(":/icon/Icons/play_normal.png"));
+    start_target_button_p_->setFocus(new QIcon(":/icon/Icons/play_focus.png"));
+    start_target_button_p_->setPressed(new QIcon(":/icon/Icons/play_pressed.png"));
+    start_target_button_p_->setFlat(true);
+    start_target_button_p_->setStyleSheet("border:none");
+    start_target_button_p_->setToolTip(QString("开始番茄钟"));
+
+    complete_target_button_p_->setFixedSize(45, 45);
+    complete_target_button_p_->setFlat(true);
+    complete_target_button_p_->setStyleSheet("border:none");
+    complete_target_button_p_->setScalingFactor(0.6);
+    complete_target_button_p_->setNormal(new QIcon(":/icon/Icons/finish.png"));
+    complete_target_button_p_->setFocus(new QIcon(":/icon/Icons/finish.png"));
+    complete_target_button_p_->setPressed(new QIcon(":/icon/Icons/finish.png"));
+    complete_target_button_p_->setToolTip(QString("目标已完成"));
+}
+
+void lon::TargetWidget::setThisWidgetStyle() {
+    this->setFixedHeight(80);
+    // 移除固定宽度限制，让任务目标组件能够自适应窗口大小
+    this->setMinimumWidth(450);  // 保留最小宽度，确保基本可用性
+    // this->setMaximumWidth(850);  // 注释掉最大宽度限制，允许全屏适配
+
+    this->setAutoFillBackground(true);
+    QPixmap  pixmap(":/all/Res/Img/titlebarbackground.png");
+    QPalette palette = this->palette();
+    palette.setBrush(
+        this->backgroundRole(),
+        QBrush(pixmap.scaled(this->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+    this->setPalette(palette);
+}
+
+void lon::TargetWidget::initLayout() {
+    QSpacerItem* item1 = new QSpacerItem(30, 10, QSizePolicy::Fixed, QSizePolicy::Minimum);
+    QSpacerItem* item2 = new QSpacerItem(30, 10, QSizePolicy::Fixed, QSizePolicy::Minimum);
+    main_layout_p_->addItem(item1, 0, 0, 1, 1);
+    main_layout_p_->addWidget(label_p_, 0, 1, 1, 1);
+    main_layout_p_->addItem(item2, 1, 0, 1, 1);
+    main_layout_p_->addWidget(target_label_p_, 1, 1, 1, 1);
+    main_layout_p_->addWidget(complete_target_button_p_, 0, 4, 2, 1);
+    main_layout_p_->addWidget(start_target_button_p_, 0, 5, 2, 1);
+    
+    // 设置列拉伸，让标签和目标列能够充分利用空间
+    main_layout_p_->setColumnStretch(1, 1);  // 标签列可拉伸
+    main_layout_p_->setColumnStretch(2, 1);  // 目标列可拉伸
+    
+    this->setLayout(main_layout_p_);
+}
+
+void lon::TargetWidget::drawWorkStuation(QWidget* widget, int num) {
+    qobject_cast<QLabel*>(widget)->setText(QString::number(num));
+}
+
+lon::TargetWidget::TargetWidget(QString label_name, QString target_name, QWidget* parent)
+    : QWidget(parent), target_name_(target_name), label_name_(label_name) {
+    initWidgets();
+    setWidgetsStyle();
+    initLayout();
+    setThisWidgetStyle();
+    connect(start_target_button_p_, &Button::clicked, this, &TargetWidget::emitButtonClicked);
+
+    qDebug() << "创建TargetWidget - 标签：" << label_name_ << "，目标：" << target_name_ << "，按钮是否启用：" << complete_target_button_p_->isEnabled();
+    
+
+    bool connected = connect(complete_target_button_p_, SIGNAL(clicked()), this, SLOT(onCompleteButtonClicked()));
+    qDebug() << "完成按钮信号连接结果：" << connected;
+}
+
+void lon::TargetWidget::setLastWeekData(std::shared_ptr<tomato_clock::LastWeekData> ptr) {
+    last_week_data_p_ = ptr;
+    week_label_p_ = new QLabel(this);
+    week_situation_widget_p_ = new QLabel(this);
+    week_label_p_->setFixedHeight(label_height);
+    week_label_p_->setText(QString("过去7天"));
+    main_layout_p_->addWidget(week_situation_widget_p_, 0, 2, 1, 1);
+    main_layout_p_->addWidget(week_label_p_, 1, 2, 1, 1);
+    int count{};
+    if (last_week_data_p_ != nullptr)
+        for (const auto& i  : (last_week_data_p_->target_data))
+            if (i.first == target_name_)
+                count += i.second;
+    drawWorkStuation(week_situation_widget_p_, count);
+}
+
+void lon::TargetWidget::setLastMonthData(std::shared_ptr<tomato_clock::LastMonthData> ptr) {
+    last_month_data_p_ = ptr;
+    month_label_p_ = new QLabel(this);
+    month_situation_widget_p_ = new QLabel(this);
+    month_situation_widget_p_->setPalette(QPalette(Qt::red));
+    month_situation_widget_p_->setAutoFillBackground(false);
+    month_label_p_->setFixedHeight(label_height);
+    month_label_p_->setText(QString("过去30天"));
+    main_layout_p_->addWidget(month_situation_widget_p_, 0, 3, 1, 1);
+    main_layout_p_->addWidget(month_label_p_, 1, 3, 1, 1);
+    int count{};
+    if (last_month_data_p_ != nullptr)
+        for (const auto&  i : (last_month_data_p_->target_data))
+            if (i.first == target_name_)
+                count += i.second;
+    drawWorkStuation(month_situation_widget_p_, count);
+}

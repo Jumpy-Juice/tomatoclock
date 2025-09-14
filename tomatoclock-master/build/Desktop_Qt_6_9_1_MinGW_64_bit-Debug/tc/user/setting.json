@@ -1,0 +1,9 @@
+{
+    "ClockSetting": {
+        "KeepWorking": 0,
+        "LongbreakTime": 5,
+        "ShortbreakTime": 1,
+        "TimesBetweenLong": 3,
+        "WorkTime": 10
+    }
+}
